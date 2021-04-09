@@ -3,8 +3,7 @@ package fr.uga.pddl4j.tutorial.satplanner;
 import fr.uga.pddl4j.encoding.CodedProblem;
 import fr.uga.pddl4j.util.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static java.lang.Math.max;
 
@@ -20,6 +19,7 @@ public final class SATEncoding {
      * A SAT problem in dimacs format is a list of int list a.k.a clauses
      */
     private final List<int[]> dimacs;
+    private HashMap<Integer, ArrayList> transitions;
 
     private final BitState init;
     private final BitState goal;
@@ -42,13 +42,6 @@ public final class SATEncoding {
        relevantfact = problem.getRelevantFacts();
 
        buildInit();
-        // Encoding of init
-        // Each fact is a unit clause
-
-        // We get the goal from the planning problem
-
-        //Bitvector = 0001001 => les modifications
-        //BitState  = 0101010 => etat des variable a ce moment
     }
 
     private void buildInit(){
@@ -67,10 +60,10 @@ public final class SATEncoding {
         for(int i=0;i < relevantfact.size();i++ ){
             int[] clause = new int[1];
             if(goal.get(i)) {
-                clause[0]= pair(i,steps+1);
+                clause[0]= pair(i,steps +1);
             }
             else {
-                clause[0]= - pair(i,steps+1);
+                clause[0]= - pair(i,steps +1);
             }
             list.add(clause);
 
@@ -91,11 +84,25 @@ public final class SATEncoding {
     private void addClause(int clause) {
         int[] clauseTab = new int[1];
         clauseTab[0] = clause;
+        addClause(clauseTab);
+    }
+
+    private void addClause(int[] clauseTab) {
         dimacs.add(clauseTab);
     }
 
-    private void addClause(int[] clause) {
-        dimacs.add(clause);
+    private void addClause(ArrayList<Integer> clause){
+        int[] clauseTab = new int[clause.size()];
+        int i=0;
+        System.out.print("Je construis cette transition : ");
+
+        for(Integer variable : clause){
+            clauseTab[i]=variable;
+            System.out.print(clauseTab[i]+" ");
+            i++;
+        }
+        System.out.println("");
+        addClause(clauseTab);
     }
 
 
@@ -103,12 +110,15 @@ public final class SATEncoding {
      * SAT encoding for next step
      */
     public List<int[]> next() {
+        transitions = new HashMap<Integer, ArrayList>();
         for (int i = 0; i < problem.getOperators().size(); i++) {
             addAction(i);
         }
+
+        buildtransition();
         List<int[]> res =buildGoal();
-        steps++;
         showClause(res);
+        steps++;
         return res;
     }
     // action => precondition1 ^ ..... preconditionN ^ positifefect1 ^ ... positifefectN ^ - negatifeffect1 ^ ... - negatifeffectN
@@ -131,10 +141,6 @@ public final class SATEncoding {
             addClause(clause);
         }
         for(int i=0;i < relevantfact.size();i++ ){
-
-
-
-
             if(precond.get(i)){
                 int[] clause = new int[2];
                 clause[0] = -code_op;
@@ -146,25 +152,56 @@ public final class SATEncoding {
                 clause[0] = -code_op;
                 clause[1] = pair(i,steps);
                 addClause(clause);
+                addtransition(i,code_op);
             }
             if(negative.get(i)){
                 int[] clause = new int[2];
                 clause[0] = -code_op;
                 clause[1] = - pair(i,steps);
                 addClause(clause);
+                addtransition(-i,code_op);
             }
         }
     }
 
-    private static int pair(int a, int b) {
-        return (int) ( ( (float)1.0/(float)2.0 )  * ( (float) ( (a+b) * (a+b+1) +b ) ) )  + 1;
+
+    private void addtransition(int fi,int ai){
+        transitions.putIfAbsent(fi,new ArrayList<Integer>());
+        transitions.get(fi).add(ai);
     }
 
-    public static int[] unpair(int z) {
+    // fi ^ - fi+1 => a v a4 v ... ai
+    // -fi v fi+1 v a v a4 v ... ai
+    private void buildtransition(){
+        for(Map.Entry<Integer, ArrayList> operations_fi : transitions.entrySet()){
+            ArrayList clause = operations_fi.getValue();
+            if(operations_fi.getKey() > 0){
+                clause.add(- pair(operations_fi.getKey(),steps));
+                clause.add(pair(operations_fi.getKey(),steps + 1));
+            }
+            else{
+                clause.add( pair(- operations_fi.getKey(),steps));
+                clause.add(- pair(- operations_fi.getKey(),steps + 1));
+            }
+            addClause(clause);
+        }
+
+    }
+    private static int pair(int bitnum, int step) {
+        //Using Cantor paring function to generate unique number
+        return (int) (0.5 * (bitnum + step) * (bitnum + step + 1) + step) + 1;
+    }
+
+
+    private static int[] unpair(int z) {
+        /*
+        Cantor unpair function is the reverse of the pairing function. It takes a single input
+        and returns the two corespoding values.
+        */
         z--;
-        long t = (int) (Math.floor((Math.sqrt(8 * z + 1) - 1) / 2));
-        int x = (int) (t * (t + 3) / 2 - z);
-        int y = (int) (z - t * (t + 1) / 2);
-        return new int[]{x, y}; //Returning an array containing the two numbers
+        int t = (int) (Math.floor((Math.sqrt(8 * z + 1) - 1) / 2));
+        int bitnum = t * (t + 3) / 2 - z;
+        int step = z - t * (t + 1) / 2;
+        return new int[]{bitnum, step}; //Returning an array containing the two numbers
     }
 }

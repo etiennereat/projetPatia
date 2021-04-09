@@ -106,6 +106,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 System.exit(1);
             } catch (ContradictionException e){
                 System.out.println("SAT encoding failure!");
+                e.printStackTrace();
                 System.exit(2);
             }
             /*
