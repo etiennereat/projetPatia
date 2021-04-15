@@ -49,9 +49,6 @@ public final class SATEncoding {
             if(init.get(i)) {
                 addClause(pair(i,steps));
             }
-            else {
-                addClause(-pair(i,steps));
-            }
         }
     }
 
@@ -61,11 +58,12 @@ public final class SATEncoding {
             int[] clause = new int[1];
             if(goal.get(i)) {
                 clause[0]= pair(i,steps +1);
+                list.add(clause);
             }
-            else {
+            /*else {
                 clause[0]= - pair(i,steps +1);
-            }
-            list.add(clause);
+                list.add(clause);
+            }*/
 
         }
         return list;
@@ -94,14 +92,11 @@ public final class SATEncoding {
     private void addClause(ArrayList<Integer> clause){
         int[] clauseTab = new int[clause.size()];
         int i=0;
-        System.out.print("Je construis cette transition : ");
 
         for(Integer variable : clause){
             clauseTab[i]=variable;
-            System.out.print(clauseTab[i]+" ");
             i++;
         }
-        System.out.println("");
         addClause(clauseTab);
     }
 
@@ -178,6 +173,7 @@ public final class SATEncoding {
             if(operations_fi.getKey() > 0){
                 clause.add(- pair(operations_fi.getKey(),steps));
                 clause.add(pair(operations_fi.getKey(),steps + 1));
+
             }
             else{
                 clause.add( pair(- operations_fi.getKey(),steps));
