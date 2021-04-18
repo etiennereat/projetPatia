@@ -1,0 +1,1 @@
+typeSearchIndex = [{"l":"All Classes","url":"allclasses-index.html"},{"p":"fr.uga.pddl4j.tutorial.satplanner","l":"SATPlanner"}]
