@@ -1,5 +1,6 @@
 package fr.uga.pddl4j.tutorial.satplanner;
 
+
 import fr.uga.pddl4j.encoding.CodedProblem;
 import fr.uga.pddl4j.parser.ErrorManager;
 import fr.uga.pddl4j.planners.Planner;
@@ -9,7 +10,9 @@ import fr.uga.pddl4j.planners.statespace.StateSpacePlanner;
 import fr.uga.pddl4j.util.*;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.List;
 
@@ -22,6 +25,7 @@ import org.sat4j.specs.TimeoutException;
 import org.sat4j.tools.ModelIterator;
 
 import static fr.uga.pddl4j.tutorial.satplanner.SATEncoding.unpair;
+import static java.lang.System.currentTimeMillis;
 
 /**
  * This class implements a simple SAT planner based on SAT4J.
@@ -119,7 +123,11 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 //si on atteint la borne temporelle on s'arrete
             } catch (TimeoutException e) {
                 System.out.println("Timeout! No solution found!");
-                System.exit(1);
+                return null;
+            }
+
+            if(current_step == max_step){
+                return null;
             }
 
             int factSize = problem.getRelevantFacts().size();
@@ -133,9 +141,9 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 // si le bitnum est plus grand que le nombre de fait alors c'est une action
                 if (bitnum > factSize) {
                     //on récupere l'encodage de l'action
-                    BitOp action = problem.getOperators().get(bitnum - factSize);
+                    BitOp action = problem.getOperators().get(bitnum - (factSize));
                     //on la sauvegarde dans l'ordre grace a son étape
-                    sortingActions[step - 1] = action;
+                    sortingActions[step] = action;
                 }
             }
             //on sauvegarde les actions dans le plan
@@ -170,6 +178,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 .append("-t <num>    SAT solver timeout in seconds\n")
                 .append("-n <num>    Max number of steps\n")
                 .append("-q          quiet console output\n")
+                .append("-s <str>   specifies save file name\n")
                 .append("-h          print this message\n\n");
         Planner.getLogger().trace(strb.toString());
     }
@@ -185,6 +194,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
         // Get the default arguments from the super class
         final Properties arguments = StateSpacePlanner.getDefaultArguments();
         arguments.put("quiet", 0);
+        arguments.put("steps", 200000);
         arguments.put(Planner.TIMEOUT, 300);
         // Parse the command line and update the default argument value
         for (int i = 0; i < args.length; i += 2) {
@@ -198,6 +208,12 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 final int timeout = Integer.parseInt(args[i + 1]);
                 if (timeout < 0) return null;
                 arguments.put(Planner.TIMEOUT, timeout);
+            } else if ("-s".equalsIgnoreCase(args[i]) && ((i + 1) < args.length)) {
+                try {
+                    arguments.put("csvFile", new FileWriter(args[i + 1], true));
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             } else if ("-q".equalsIgnoreCase(args[i])) {
                 arguments.put("quiet", 1);
                 i--;
@@ -228,6 +244,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
      * -t <i>num</i>   specifies the maximum CPU-time in seconds
      * -n <i>num</i>   specifies the maximum number of steps
      * -q              quiet console output
+     * -s <i>str</i>   specifies save file name
      * -h              print this message
      *
      * @param args the arguments of the command line.
@@ -273,8 +290,28 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 System.exit(0);
             }
         }
-
+        long startTime = currentTimeMillis();
         final Plan plan = planner.search(pb);
+        long endTime = currentTimeMillis();
 
+        long execTime = endTime - startTime;
+
+        FileWriter csvWriter = (FileWriter) arguments.get("csvFile");
+        if(csvWriter != null) {
+
+            int makespan = -1;
+            if(plan != null){
+                makespan = plan.size();
+            }
+            List<String> rowData = Arrays.asList("SatSolver",domain.getName(), problem.getName(), Integer.toString(makespan),Long.toString(execTime));
+            try {
+                csvWriter.append(String.join(",", rowData));
+                csvWriter.append("\n");
+                csvWriter.flush();
+                csvWriter.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

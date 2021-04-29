@@ -1,0 +1,1 @@
+javac -d classes -cp classes:lib/pddl4j-3.8.3.jar:lib/sat4j-sat.jar src/fr/uga/pddl4j/tutorial/*/*.java -Xlint:unchecked

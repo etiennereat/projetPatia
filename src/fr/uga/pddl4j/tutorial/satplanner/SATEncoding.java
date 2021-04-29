@@ -303,8 +303,7 @@ public final class SATEncoding {
         long t = (int) (Math.floor((Math.sqrt(8 * z + 1) - 1) / 2));
         long x = t * (t + 3) / 2 - z;
         long y = z - t * (t + 1) / 2;
-        x++;
-        y++;
+
         return new int[]{(int) x, (int) y}; //Returning an array containing the two numbers
 
     }
