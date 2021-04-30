@@ -22,7 +22,6 @@ import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IProblem;
 import org.sat4j.specs.ISolver;
 import org.sat4j.specs.TimeoutException;
-import org.sat4j.tools.ModelIterator;
 
 import static fr.uga.pddl4j.tutorial.satplanner.SATEncoding.unpair;
 import static java.lang.System.currentTimeMillis;
@@ -38,7 +37,7 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
     /*
      * The arguments of the planner.
      */
-    private Properties arguments;
+    private final Properties arguments;
 
     /**
      * Creates a new SAT planner with the default parameters.
@@ -63,13 +62,8 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
         // We get the initial state from the planning problem
         final BitState init = new BitState(problem.getInit());
         // We get the goal from the planning problem
-        final BitState goal = new BitState(problem.getGoal());
         // Nothing to do, goal is already satisfied by the initial state
-        if (init.satisfy(problem.getGoal())) {
-            return plan;
-        }
-        // Otherwise, we start the search
-        else {
+        if (!init.satisfy(problem.getGoal())) {
 
             List<int[]> clauses = null;
             // SAT solver timeout
@@ -80,8 +74,6 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             int NBCLAUSES = 100000;
 
             ISolver solver = SolverFactory.newDefault();
-            solver.setTimeout(timeout);
-            ModelIterator mi = new ModelIterator(solver);
             IProblem ip = null;
 
             int max_step = (Integer) this.arguments.get("steps");
@@ -89,16 +81,15 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
             int current_step = 1;
             SATEncoding encoder = new SATEncoding(problem, current_step);
 
-
-            solver.newVar(MAXVAR);
-            solver.setExpectedNumberOfClauses(NBCLAUSES);
-
             //boucle tant que le sat solver ne trouve pas de solution ou que l'on atteint pas une limite (nb clauses ou temps)
             try {
                 do {
                     try {
                         //reinitialise le solver
                         solver.reset();
+                        solver.newVar(MAXVAR);
+                        solver.setExpectedNumberOfClauses(NBCLAUSES);
+                        solver.setTimeout(timeout);
                         if ((int) arguments.get("quiet") == 0)
                             System.out.println("On esssaie de resoudre a l'etape " + current_step);
                         //on genere les clauses a l'etape +1
@@ -126,24 +117,26 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
                 return null;
             }
 
-            if(current_step == max_step){
+            if (current_step == max_step) {
                 return null;
             }
 
             int factSize = problem.getRelevantFacts().size();
             BitOp[] sortingActions = new BitOp[current_step];
             //réalisation du plan a partir de la solution rendu par le SAT solver
-            for (int variable : ip.model()) {
-                //traduction la variable pour obtenir le bitnum et l'etape
-                int[] coupleSolution = unpair(variable);
-                int bitnum = coupleSolution[0];
-                int step = coupleSolution[1];
-                // si le bitnum est plus grand que le nombre de fait alors c'est une action
-                if (bitnum > factSize) {
-                    //on récupere l'encodage de l'action
-                    BitOp action = problem.getOperators().get(bitnum - (factSize));
-                    //on la sauvegarde dans l'ordre grace a son étape
-                    sortingActions[step] = action;
+            if (ip != null) {
+                for (int variable : ip.model()) {
+                    //traduction la variable pour obtenir le bitnum et l'etape
+                    int[] coupleSolution = unpair(variable);
+                    int bitnum = coupleSolution[0];
+                    int step = coupleSolution[1];
+                    // si le bitnum est plus grand que le nombre de fait alors c'est une action
+                    if (bitnum >= factSize) {
+                        //on récupere l'encodage de l'action
+                        BitOp action = problem.getOperators().get(bitnum - (factSize));
+                        //on la sauvegarde dans l'ordre grace a son étape
+                        sortingActions[step] = action;
+                    }
                 }
             }
             //on sauvegarde les actions dans le plan
@@ -153,34 +146,34 @@ public final class SATPlanner extends AbstractStateSpacePlanner {
 
             //si on n'a pas enlevé l'affichage on le réalise :
             if ((int) arguments.get("quiet") == 0) {
-                if (clauses != null)
-                    System.out.println("\nnb clauses : " + clauses.size());
+                System.out.println("\nnb clauses : " + clauses.size());
                 System.out.println("Une des solutions :");
-                for (int variable : ip.model()) {
-                    int[] tmp = unpair(variable);
-                    System.out.println("[ " + tmp[0] + " " + tmp[1] + " ] ");
+                if (ip != null) {
+                    for (int variable : ip.model()) {
+                        int[] tmp = unpair(variable);
+                        System.out.println("[ " + tmp[0] + " " + tmp[1] + " ] ");
+                    }
                 }
                 System.out.println(problem.toString(plan));
             }
-            return plan;
         }
+        return plan;
     }
 
     /**
      * Print the usage of the SAT planner.
      */
     private static void printUsage() {
-        final StringBuilder strb = new StringBuilder();
-        strb.append("\nusage of PDDL4J:\n")
-                .append("OPTIONS   DESCRIPTIONS\n")
-                .append("-o <str>    operator file name\n")
-                .append("-f <str>    fact file name\n")
-                .append("-t <num>    SAT solver timeout in seconds\n")
-                .append("-n <num>    Max number of steps\n")
-                .append("-q          quiet console output\n")
-                .append("-s <str>   specifies save file name\n")
-                .append("-h          print this message\n\n");
-        Planner.getLogger().trace(strb.toString());
+        String strb = "\nusage of PDDL4J:\n" +
+                "OPTIONS   DESCRIPTIONS\n" +
+                "-o <str>    operator file name\n" +
+                "-f <str>    fact file name\n" +
+                "-t <num>    SAT solver timeout in seconds\n" +
+                "-n <num>    Max number of steps\n" +
+                "-q          quiet console output\n" +
+                "-s <str>   specifies save file name\n" +
+                "-h          print this message\n\n";
+        Planner.getLogger().trace(strb);
     }
 
     /**

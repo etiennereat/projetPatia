@@ -166,7 +166,6 @@ public final class SATEncoding {
         for (int i = 0; i < problem.getOperators().size(); i++) {
             addAction(i);
         }
-
         buildtransition();
         List<int[]> res = buildGoal();
         steps++;
@@ -180,13 +179,13 @@ public final class SATEncoding {
     // (-code_op v pre1) ^ (-code_op  v pre2) ...
 
     /**
-     * ajoute les clause en lien avec l'action a Dimac
+     * ajoute les clauses en lien avec l'action a Dimac
      *
      * @param bitnum le bit qui encode l'action
      */
     private void addAction(int bitnum) {
         final BitOp action = problem.getOperators().get(bitnum);
-        final BitVector precond = action.getPreconditions().getPositive();
+        final BitVector precondpos = action.getPreconditions().getPositive();
         final BitVector positive = action.getUnconditionalEffects().getPositive();
         final BitVector negative = action.getUnconditionalEffects().getNegative();
 
@@ -203,15 +202,13 @@ public final class SATEncoding {
 
         //genere les clause qui encode l'action
         for (int i = 0; i < relevantfact.size(); i++) {
-
             //genere les clauses pour les préconditions de l'action à l'etape courante
-            if (precond.get(i)) {
+            if (precondpos.get(i)) {
                 int[] clause = new int[2];
                 clause[0] = -code_op;
                 clause[1] = pair(i, steps);
                 addClause(clause);
             }
-
             //genere les clause pour les effets positifs qu'elle entraine à l'etape +1
             if (positive.get(i)) {
                 int[] clause = new int[2];

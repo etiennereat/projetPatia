@@ -6,7 +6,6 @@ import fr.uga.pddl4j.heuristics.relaxation.HeuristicToolKit;
 import fr.uga.pddl4j.parser.ErrorManager;
 import fr.uga.pddl4j.planners.Planner;
 import fr.uga.pddl4j.planners.ProblemFactory;
-import fr.uga.pddl4j.planners.Statistics;
 import fr.uga.pddl4j.planners.statespace.AbstractStateSpacePlanner;
 import fr.uga.pddl4j.planners.statespace.StateSpacePlanner;
 import fr.uga.pddl4j.util.BitOp;
@@ -33,7 +32,7 @@ public final class ASP extends AbstractStateSpacePlanner {
     /*
      * The arguments of the planner.
      */
-    private Properties arguments;
+    private final Properties arguments;
 
     /**
      * Creates a new HSP planner with the default parameters.
